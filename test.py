@@ -21,14 +21,33 @@ class PythonOrgSearch(unittest.TestCase):
     def test_search_in_python_org(self):
         driver = self.driver
         driver.get("https://web.whatsapp.com/")
-        #self.assertIn("Replikante", driver.title)
-        driver.implicitly_wait(10)
-        #elem = WebDriverWait(driver, 10).until(
-        #		EC.presence_of_element_located((By.CLASS_NAME,"jN-F5 copyable-text selectable-text"))
-        #	)
-        elem = driver.find_element_by_css_selector(".jN-F5.copyable-text.selectable-text")
-        elem.send_keys("Amor")
-        #assert "No results found." not in driver.page_source
+        elem = WebDriverWait(driver, 10).until(
+        		EC.presence_of_element_located((By.XPATH,"//*[@id='side']/div[1]/div/label/input"))
+        	)
+        elem.send_keys("Número ENviado")
+
+        try:
+        	elem = WebDriverWait(driver, 10).until(
+	        		EC.presence_of_element_located((By.XPATH,"//*[@id='pane-side']/div/div/div/div[1]"))
+	        	)
+
+	        elem.click()
+
+	        driver.implicitly_wait(2) 
+	        elem = WebDriverWait(driver, 10).until(
+	        		EC.presence_of_element_located((By.XPATH,"//*[@id='main']/footer/div[1]/div[2]/div/div[2]"))
+	        	)
+
+	        elem.clear()
+	        elem.send_keys("Mensagem Automática")
+	        elem.send_keys(Keys.RETURN)
+
+        except Exception as e:
+        	raise e
+
+
+
+
 
 if __name__ == "__main__":
     unittest.main()
