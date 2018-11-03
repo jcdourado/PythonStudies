@@ -6,6 +6,11 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 
+from flask import Flask, request, jsonify
+
+app = Flask(__name__)
+
+
 opts = ChromeOptions()
 opts.add_experimental_option("detach", True)
 
@@ -24,7 +29,9 @@ class PythonOrgSearch(unittest.TestCase):
         elem = WebDriverWait(driver, 10).until(
         		EC.presence_of_element_located((By.XPATH,"//*[@id='side']/div[1]/div/label/input"))
         	)
-        elem.send_keys("Número ENviado")
+
+        content = request.json
+        elem.send_keys(content["Numero"])
 
         try:
         	elem = WebDriverWait(driver, 10).until(
@@ -39,15 +46,19 @@ class PythonOrgSearch(unittest.TestCase):
 	        	)
 
 	        elem.clear()
-	        elem.send_keys("Mensagem Automática")
+	        elem.send_keys(content["Mensagem"])
 	        elem.send_keys(Keys.RETURN)
 
         except Exception as e:
         	raise e
 
 
-
-
+@app.route("/", methods=['GET', 'POST'])
+def receive_params():
+    unittest.main()
+    #content = request.json
+    #print(content)
+    return jsonify({"message":"Mensagem Enviada com Sucesso!"})
 
 if __name__ == "__main__":
-    unittest.main()
+	app.run(debug=True)
