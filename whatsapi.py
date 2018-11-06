@@ -1,4 +1,5 @@
 import time
+import base64
 from databaseconnector import Database
 from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
@@ -6,8 +7,10 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import NoSuchElementException, StaleElementReferenceException
-
+from datetime import datetime
 from flask import Flask, request, jsonify
+
+saltWhatsAPI = 'DJjashjkdhsauUU2321JKSAo'
 
 def sendMessage(driver):
 
@@ -85,16 +88,31 @@ def iteractOverMessages(driver):
             lastMessage = getLastMessageClient(driver,"rtl",clientDB[0][0])
 
             #print(lastMessage)
+            messageToSend = iteractOverLastMessage(driver,lastMessage)
+
             inputMessage.clear()
-            inputMessage.send_keys(iteractOverLastMessage(driver,lastMessage))
+            inputMessage.send_keys(messageToSend)
             #inputMessage.send_keys(Keys.RETURN)
+
+            current_Date = datetime.now()
+            formatted_date = current_Date.strftime('%Y-%m-%d %H:%M:%S')
+
+            hashMessage = '{}|||{}'.format(formatted_date,saltWhatsAPI)
+            hashMessage = base64.b64encode(hashMessage.encode()) 
+
+            with Database() as db:
+                db.query("INSERT INTO whatsapp_api.messagesSent (hash_message, message, id_client, date_message) VALUES (%s,%s,%s,%s)", (hashMessage, messageToSend, clientDB[0][0], formatted_date))
+
 
             try:
                 elem = WebDriverWait(driver, 3).until(
                         EC.presence_of_element_located((By.CLASS_NAME ,"_15G96"))
                     )
             except Exception as e:
-                return jsonify({"message":"Mensagem Enviada com Sucesso!"})
+                return jsonify({
+                        "message":"Mensagem Enviada com Sucesso!", 
+                        "hash": hashMessage.decode("utf-8") 
+                        })
 
 
     except Exception as e:
@@ -131,6 +149,7 @@ def getLastMessageClient(driver,textDirection,id_client):
             )
 
             newMessage = ""
+            current_Date = datetime.now()
 
             for message in messages:
                 with Database() as db:
@@ -138,7 +157,9 @@ def getLastMessageClient(driver,textDirection,id_client):
                     messageDB = db.fetchall()
 
                     if not messageDB:
-                        db.query("INSERT INTO whatsapp_api.messages (message, id_client, dateMessage, opened) VALUES (%s, %s, %s, 1)", (message.text, id_client, "current_date"))
+                        hourMessage = message.find_element_by_xpath("../../../div/*[contains(@class, '_2f-RV')]/*[contains(@class, '_1DZAH')]/*[contains(@class, '_3EFt_')]")
+                        formatted_date = current_Date.strftime('%Y-%m-%d {}:{}:00'.format(hourMessage.text[:2],hourMessage.text[3:5]))
+                        db.query("INSERT INTO whatsapp_api.messages (message, id_client, date_message, opened) VALUES (%s, %s, %s, 1)", (message.text, id_client, formatted_date))
                         newMessage = newMessage + " - " + message.text
 
             return newMessage

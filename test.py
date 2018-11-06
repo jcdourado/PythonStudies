@@ -26,6 +26,10 @@ def sendMessageRoute():
 def iteractOverMessagesRoute():
     return whatsapi.iteractOverMessages(driver)
 
+@app.rou("/getStatusMessage/", methods=['GET','POST'])
+def getStatusMessageRoute:
+    return whatsapi.getStatusMessage(driver)
+
 if __name__ == "__main__":
 	app.run(debug=True)
 
