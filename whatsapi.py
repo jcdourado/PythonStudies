@@ -7,6 +7,8 @@ from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import NoSuchElementException, StaleElementReferenceException
 
+from flask import Flask, request, jsonify
+
 def sendMessage(driver):
 
     try:
@@ -81,11 +83,19 @@ def iteractOverMessages(driver):
                     clientDB = db.fetchall()
 
             lastMessage = getLastMessageClient(driver,"rtl",clientDB[0][0])
+
+            #print(lastMessage)
             inputMessage.clear()
             inputMessage.send_keys(iteractOverLastMessage(driver,lastMessage))
             #inputMessage.send_keys(Keys.RETURN)
 
-        return jsonify({"message":"Mensagem Enviada com Sucesso!"})
+            try:
+                elem = WebDriverWait(driver, 3).until(
+                        EC.presence_of_element_located((By.CLASS_NAME ,"_15G96"))
+                    )
+            except Exception as e:
+                return jsonify({"message":"Mensagem Enviada com Sucesso!"})
+
 
     except Exception as e:
         raise e
@@ -98,10 +108,10 @@ def getLastMessageClient(driver,textDirection,id_client):
 
     while(1):
         try:
-            SCROLL_PAUSE_TIME = 0.9
+            SCROLL_PAUSE_TIME = 1.1
 
             # Get scroll height
-            last_height = driver.execute_script("return document.body.scrollHeight")
+            last_height = driver.execute_script("return document.getElementsByClassName('_2nmDZ')[0].scrollHeight")
 
             while True:
                 # Scroll down to bottom
@@ -120,11 +130,17 @@ def getLastMessageClient(driver,textDirection,id_client):
                 EC.presence_of_all_elements_located((By.XPATH,"//*[contains(@class, 'message-in')]/div/div/*[contains(@class, '_3zb-j')]"))
             )
 
-            for message in messages[::-1]:
-                with Database() as db:
-                    db.query("INSERT INTO whatsapp_api.messages (message, id_client, dateMessage) VALUES (%s, %s, %s)", (message.text, id_client, "current_date"))
+            newMessage = ""
 
-            newMessage = messages[-1].text
+            for message in messages:
+                with Database() as db:
+                    db.query("SELECT id FROM whatsapp_api.messages WHERE UPPER(message) = UPPER(%s) and id_client = %s and opened = 0", (message.text, id_client, ))
+                    messageDB = db.fetchall()
+
+                    if not messageDB:
+                        db.query("INSERT INTO whatsapp_api.messages (message, id_client, dateMessage, opened) VALUES (%s, %s, %s, 1)", (message.text, id_client, "current_date"))
+                        newMessage = newMessage + " - " + message.text
+
             return newMessage
 
         except (NoSuchElementException, StaleElementReferenceException) as e:
