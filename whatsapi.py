@@ -105,6 +105,9 @@ def iteractOverMessages(driver):
             hashMessage = '{}|||{}|||{}'.format(formatted_date,clientDB[0][0],saltWhatsAPI)
             hashMessage = base64.b64encode(hashMessage.encode()) 
 
+            elem = driver.find_element_by_xpath("//*[@id='pane-side']/div/div/div/div/div/div[not(contains(@class, 'CxUIE'))]")
+            elem.click()
+
             with Database() as db:
                 db.query("INSERT INTO whatsapp_api.messagesSent (hash_message, message, id_client, date_message) VALUES (%s,%s,%s,%s)", (hashMessage, messageToSend, clientDB[0][0], formatted_date))
                 hashToJSON = {"name":clientName.text.strip(), "hash": hashMessage.decode("utf-8")}
