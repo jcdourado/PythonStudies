@@ -32,6 +32,10 @@ def iteractOverMessagesRoute():
 def getStatusMessageRoute():
     return whatsapi.getStatusMessage(driver)
 
+@app.route("/sendMedia/", methods=['GET','POST'])
+def sendMediaRoute():
+	return whatsapi.sendMedia(driver)
+
 if __name__ == "__main__":
 	app.run(debug=False)
 

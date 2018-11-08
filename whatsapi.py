@@ -32,6 +32,21 @@ def sendMessage(driver):
         elem.click()
 
         driver.implicitly_wait(8) 
+
+        client = WebDriverWait(driver, 1).until(
+                EC.presence_of_element_located((By.CLASS_NAME ,"_1f1zm"))
+            )
+
+        clientName = client.find_element_by_class_name("_25Ooe")
+
+        with Database() as db:
+            db.query("SELECT id FROM whatsapp_api.clients WHERE UPPER(name) = UPPER(%s)", (clientName.text.strip(), ))
+            clientDB = db.fetchall()
+            if not clientDB:
+                db.query("INSERT INTO whatsapp_api.clients (name, active) VALUES (%s, 1)", (clientName.text.strip(), ))
+                db.query("SELECT id FROM whatsapp_api.clients WHERE UPPER(name) = UPPER(%s)", (clientName.text.strip(), ))
+                clientDB = db.fetchall()
+
         elem = WebDriverWait(driver, 10).until(
                 EC.presence_of_element_located((By.XPATH,"//*[@id='main']/footer/div[1]/div[2]/div/div[2]"))
             )
@@ -39,7 +54,20 @@ def sendMessage(driver):
         elem.clear()
         elem.send_keys(content["message"])
         elem.send_keys(Keys.RETURN)
-        return jsonify({"message":"Mensagem Enviada com Sucesso!"})
+
+        current_Date = datetime.now()
+        formatted_date = current_Date.strftime('%Y-%m-%d %H:%M:%S')
+
+        hashMessage = '{}|||{}|||{}'.format(formatted_date,clientDB[0][0],saltWhatsAPI)
+        hashMessage = base64.b64encode(hashMessage.encode()) 
+
+        with Database() as db:
+            db.query("INSERT INTO whatsapp_api.messagesSent (hash_message, message, id_client, date_message) VALUES (%s,%s,%s,%s)", (hashMessage, content["message"], clientDB[0][0], formatted_date))
+
+        return jsonify({
+                        "message":"Mensagem Enviada com Sucesso!",
+                        "hash": hashMessage.decode("utf-8")
+                        })
 
     except Exception as e:
         return jsonify({"message":"Falha ao enviar Mensagem!"})
@@ -293,16 +321,16 @@ def getStatusMessage(driver):
                                     if blocoHour.text == messageDB[0][2].strftime('%H:%M'):
                                         
                                         try:
-                                            blocoStatus = blocoMessage.find_element_by_xpath("../../../*[contains(@class, '_2f-RV')]/*[contains(@class, '_1DZAH')]/*[contains(@class, '_32uRw')]/span[contains(@data-icon,'msg-dblcheck-ack')]")
                                             statusTxt = "Visualizada"
+                                            blocoStatus = blocoMessage.find_element_by_xpath("../../../*[contains(@class, '_2f-RV')]/*[contains(@class, '_1DZAH')]/*[contains(@class, '_32uRw')]/span[contains(@data-icon,'msg-dblcheck-ack')]")
                                         except Exception as a:
                                             try:
-                                                blocoStatus = blocoMessage.find_element_by_xpath("../../../*[contains(@class, '_2f-RV')]/*[contains(@class, '_1DZAH')]/*[contains(@class, '_32uRw')]/span[contains(@data-icon,'msg-dblcheck')]")
                                                 statusTxt = "Enviada"
+                                                blocoStatus = blocoMessage.find_element_by_xpath("../../../*[contains(@class, '_2f-RV')]/*[contains(@class, '_1DZAH')]/*[contains(@class, '_32uRw')]/span[contains(@data-icon,'msg-dblcheck')]")
                                             except Exception as a:
                                                 try:
-                                                    blocoStatus = blocoMessage.find_element_by_xpath("../../../*[contains(@class, '_2f-RV')]/*[contains(@class, '_1DZAH')]/*[contains(@class, '_32uRw')]/span[contains(@data-icon,'msg-check')]")
                                                     statusTxt = "Não recebida"
+                                                    blocoStatus = blocoMessage.find_element_by_xpath("../../../*[contains(@class, '_2f-RV')]/*[contains(@class, '_1DZAH')]/*[contains(@class, '_32uRw')]/span[contains(@data-icon,'msg-check')]")
                                                 except Exception as a:
                                                     statusTxt = "Não enviada"
 
@@ -336,6 +364,17 @@ def iteractOverLastMessage(driver,message):
         return "Olá, boa tarde"
 
     return "Mensagem não encontrada"
+
+def sendMedia(driver):
+    content = request.json
+
+    try:
+        if content:
+
+    except Exception as e:
+        print(e)
+
+    return jsonify({"message": "Parâmetros incorretos"})
 
 def readAllMessages(textDirection):
     global driver    
