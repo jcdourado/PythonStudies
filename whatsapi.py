@@ -105,9 +105,6 @@ def iteractOverMessages(driver):
             hashMessage = '{}|||{}|||{}'.format(formatted_date,clientDB[0][0],saltWhatsAPI)
             hashMessage = base64.b64encode(hashMessage.encode()) 
 
-            elem = driver.find_element_by_xpath("//*[@id='pane-side']/div/div/div/div/div/div[not(contains(@class, 'CxUIE'))]")
-            elem.click()
-
             with Database() as db:
                 db.query("INSERT INTO whatsapp_api.messagesSent (hash_message, message, id_client, date_message) VALUES (%s,%s,%s,%s)", (hashMessage, messageToSend, clientDB[0][0], formatted_date))
                 hashToJSON = {"name":clientName.text.strip(), "hash": hashMessage.decode("utf-8")}
@@ -119,6 +116,8 @@ def iteractOverMessages(driver):
                     )
 
             except Exception as e:
+                elem = driver.find_element_by_xpath("//*[@id='pane-side']/div/div/div/div/div/div[not(contains(@class, 'CxUIE'))]")
+                elem.click()
                 return jsonify({
                         "message":"Mensagem Enviada com Sucesso!", 
                         "hashes": hashes 
@@ -161,15 +160,44 @@ def getLastMessageClient(driver,textDirection,id_client):
             newMessage = ""
             current_Date = datetime.now()
 
+            weekday_name = ["SEGUNDA-FEIRA", "TERÇA-FEIRA", "QUARTA-FEIRA", "QUINTA-FEIRA", "SEXTA-FEIRA", "SÁBADO", "DOMINGO"]
+
             for message in messages:
                 with Database() as db:
-                    db.query("SELECT id FROM whatsapp_api.messages WHERE UPPER(message) = UPPER(%s) and id_client = %s and opened = 0", (message.text, id_client, ))
+                    messageDate = message.find_elements_by_xpath("../../../../preceding-sibling::div[contains(@class, '_3rjxZ')]")
+                    hourMessage = message.find_element_by_xpath("../../../div/*[contains(@class, '_2f-RV')]/*[contains(@class, '_1DZAH')]/*[contains(@class, '_3EFt_')]")
+
+                    if len(messageDate) == 2:
+                        messageDate = messageDate[len(messageDate) - 2]
+                    else:
+                        messageDate = messageDate[len(messageDate) - 1]
+                        
+                    if messageDate.text == "HOJE":
+                        messageDate = datetime.now()
+                    elif messageDate.text == "ONTEM":
+                        messageDate = datetime.now() - timedelta(days=1)
+                    elif messageDate.text in weekday_name:
+                        contDay = 2
+                        auxMessageDate = datetime.now().date() - timedelta(days=contDay)
+                        
+                        while True:
+                            if auxMessageDate.weekday() == weekday_name.index(messageDate.text):
+                                messageDate = auxMessageDate
+                                break
+                            contDay = contDay + 1
+                            auxMessageDate = datetime.now().date() - timedelta(days=contDay)
+
+                    else:
+                        auxMessageDate = messageDate.text.split("/")
+                        messageDate = datetime(auxMessageDate[2],auxMessageDate[1].zfill(2),auxMessageDate[0].zfill(2))
+
+                    formatted_date = messageDate.strftime('%Y-%m-%d {}:{}:00'.format(hourMessage.text[:2],hourMessage.text[3:5]))
+                    
+                    db.query("SELECT id FROM whatsapp_api.messages WHERE UPPER(message) = UPPER(%s) and id_client = %s and date_message = %s", (message.text, id_client, formatted_date))
                     messageDB = db.fetchall()
 
                     if not messageDB:
-                        hourMessage = message.find_element_by_xpath("../../../div/*[contains(@class, '_2f-RV')]/*[contains(@class, '_1DZAH')]/*[contains(@class, '_3EFt_')]")
-                        formatted_date = current_Date.strftime('%Y-%m-%d {}:{}:00'.format(hourMessage.text[:2],hourMessage.text[3:5]))
-                        db.query("INSERT INTO whatsapp_api.messages (message, id_client, date_message, opened) VALUES (%s, %s, %s, 1)", (message.text, id_client, formatted_date))
+                        db.query("INSERT INTO whatsapp_api.messages (message, id_client, date_message) VALUES (%s, %s, %s)", (message.text, id_client, formatted_date))
                         newMessage = newMessage + " - " + message.text
 
             return newMessage
