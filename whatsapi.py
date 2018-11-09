@@ -7,6 +7,7 @@ from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.common.exceptions import NoSuchElementException, StaleElementReferenceException
+import os
 from datetime import datetime, timedelta
 from flask import Flask, request, jsonify
 
@@ -25,11 +26,13 @@ def sendMessage(driver):
 
         time.sleep(4)
 
-        elem = WebDriverWait(driver, 10).until(
-                EC.presence_of_element_located((By.XPATH,"//*[@id='pane-side']/div/div/div/div[1]"))
-            )
+        elem.send_keys(Keys.RETURN)
 
-        elem.click()
+        # elem = WebDriverWait(driver, 10).until(
+        #         EC.presence_of_element_located((By.XPATH,"//*[@id='pane-side']/div/div/div/div[1]"))
+        #     )
+
+        # elem.click()
 
         driver.implicitly_wait(8) 
 
@@ -263,11 +266,12 @@ def getStatusMessage(driver):
 
                     time.sleep(4)
 
-                    elem = WebDriverWait(driver, 10).until(
-                            EC.presence_of_element_located((By.XPATH,"//*[@id='pane-side']/div/div/div/div[1]"))
-                        )
+                    elem.send_keys(Keys.RETURN)
+                    # elem = WebDriverWait(driver, 10).until(
+                    #         EC.presence_of_element_located((By.XPATH,"//*[@id='pane-side']/div/div/div/div[1]"))
+                    #     )
 
-                    elem.click()
+                    # elem.click()
 
                     SCROLL_PAUSE_TIME = 1.1
 
@@ -369,7 +373,43 @@ def sendMedia(driver):
     content = request.json
 
     try:
-        if content:
+
+        contactNumber = content["contactNumber"]
+        
+        if contactNumber:
+            elem = WebDriverWait(driver, 10).until(
+                    EC.presence_of_element_located((By.XPATH,"//*[@id='side']/div[1]/div/label/input"))
+                )
+
+            elem.clear()
+            elem.send_keys(content["contactNumber"])
+
+            time.sleep(2)
+            elem.send_keys(Keys.RETURN)
+
+            elem = WebDriverWait(driver, 3).until(
+                    EC.presence_of_element_located((By.XPATH,"//div[@title='Anexar']"))
+                )
+
+            elem.click()
+
+            time.sleep(2)
+
+            elem = WebDriverWait(driver, 10).until(
+                    EC.presence_of_element_located((By.XPATH,"//input[@type='file']"))
+                )
+
+            elem.send_keys(os.path.abspath("C:\\Users\\Julio Dourado\\Desktop\\testeFoto.jpg"))
+
+            time.sleep(2)
+
+            elem = WebDriverWait(driver, 10).until(
+                    EC.presence_of_element_located((By.XPATH,"//div[contains(@class, '_3hV1n')]"))
+                )
+            
+            elem.click() 
+
+            return jsonify({"message": "Arquivo Enviado com sucesso"})
 
     except Exception as e:
         print(e)
